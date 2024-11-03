@@ -1,0 +1,136 @@
+# Analyse_Technique/analyse_technique.py
+
+import yfinance as yf
+import pandas as pd
+
+# Fonction pour récupérer les données financières
+def get_financial_data(ticker):
+    entreprise = yf.Ticker(ticker)
+    compte_de_resultat = entreprise.financials
+    bilan = entreprise.balance_sheet
+
+    chiffre_affaires = compte_de_resultat.loc['Total Revenue'][:3] * 1e-6
+    ebitda = compte_de_resultat.loc['EBITDA'][:3] * 1e-6
+    benefice_brut = compte_de_resultat.loc['Gross Profit'][:3]
+    benefice_operationnel = compte_de_resultat.loc['Operating Income'][:3]
+    benefice_net = compte_de_resultat.loc['Net Income'][:3] * 1e-6
+    dette_totale = bilan.loc['Total Debt'][:3] * 1e-6
+    tresorerie = bilan.loc['Cash And Cash Equivalents'][:3] * 1e-6
+    dette_nette = dette_totale - tresorerie
+    annees = [str(date.year) for date in chiffre_affaires.index][::-1]
+
+    marge_brute = [(benefice_brut[annee] / chiffre_affaires[annee]) * 100 for annee in chiffre_affaires.index][::-1]
+    marge_ope = [(benefice_operationnel[annee] / chiffre_affaires[annee]) * 100 for annee in chiffre_affaires.index][::-1]
+    marge_benef = [(benefice_net[annee] / chiffre_affaires[annee]) * 100 for annee in chiffre_affaires.index][::-1]
+
+    marges_df = pd.DataFrame({
+        'Année': annees,
+        'Chiffre d\'Affaires (millions)': chiffre_affaires.values[::-1],
+        'EBITDA (millions)': ebitda.values[::-1],
+        'Dette Nette (millions)': dette_nette.values[::-1],
+        'Marge Brute (%)': marge_brute,
+        'Marge Opérationnelle (%)': marge_ope,
+        'Marge Bénéficiaire (%)': marge_benef,
+        'Résultat Net (millions)': benefice_net.values[::-1]
+    }).set_index('Année').T
+
+    return marges_df, marge_brute, marge_ope, marge_benef, ebitda, benefice_net, dette_nette
+
+def analyse_marge_brute(marge_brute):
+    if marge_brute[2] > marge_brute[1] > marge_brute[0]:
+        return "La marge brute a augmenté chaque année, indiquant une gestion de production efficace.", "bon"
+    elif marge_brute[2] < marge_brute[1] < marge_brute[0]:
+        return "La marge brute a baissé chaque année, ce qui peut indiquer une augmentation des coûts de production.", "mauvais"
+    elif marge_brute[2] > marge_brute[1] < marge_brute[0]:
+        return "La marge brute a d'abord baissé, puis s'est redressée, ce qui peut indiquer une tentative d'optimisation des coûts de production.", "bon"
+    elif marge_brute[2] < marge_brute[1] > marge_brute[0]:
+        return "La marge brute a augmenté, puis diminué, ce qui peut suggérer des difficultés à maintenir les gains de rentabilité.", "mauvais"
+    else:
+        return "La marge brute est restée relativement stable, montrant une constance dans les coûts de production.", "neutre"
+ 
+def analyse_marge_operationnelle(marge_ope):
+    if marge_ope[2] > marge_ope[1] > marge_ope[0]:
+        return "La marge opérationnelle a augmenté continuellement, suggérant une gestion efficace des coûts opérationnels.", "bon"
+    elif marge_ope[2] < marge_ope[1] < marge_ope[0]:
+        return "La marge opérationnelle a baissé chaque année, ce qui peut indiquer une augmentation des frais d'exploitation.", "mauvais"
+    elif marge_ope[2] > marge_ope[1] < marge_ope[0]:
+        return "La marge opérationnelle a d'abord baissé puis s'est redressée, ce qui peut suggérer une reprise d'efficacité dans la gestion des coûts.", "bon"
+    elif marge_ope[2] < marge_ope[1] > marge_ope[0]:
+        return "La marge opérationnelle a augmenté puis diminué, suggérant une instabilité dans la gestion des coûts opérationnels.", "mauvais"
+    else:
+        return "La marge opérationnelle est stable, montrant une constance dans la gestion des coûts d'exploitation.", "neutre"
+ 
+def analyse_marge_beneficiaire(marge_benef):
+    if marge_benef[2] > marge_benef[1] > marge_benef[0]:
+        return "La marge bénéficiaire a augmenté chaque année, indiquant une rentabilité croissante après toutes les dépenses.", "bon"
+    elif marge_benef[2] < marge_benef[1] < marge_benef[0]:
+        return "La marge bénéficiaire a baissé chaque année, ce qui peut signaler une augmentation des coûts totaux ou des taxes.", "mauvais"
+    elif marge_benef[2] > marge_benef[1] < marge_benef[0]:
+        return "La marge bénéficiaire a d'abord baissé puis s'est redressée, ce qui pourrait indiquer un contrôle accru des dépenses.", "bon"
+    elif marge_benef[2] < marge_benef[1] > marge_benef[0]:
+        return "La marge bénéficiaire a augmenté puis diminué, ce qui pourrait indiquer une instabilité dans la gestion des coûts ou des taxes.", "mauvais"
+    else:
+        return "La marge bénéficiaire est stable, montrant une bonne maîtrise des coûts globaux et des impôts.", "neutre"
+ 
+# Fonctions pour l'analyse de l'EBITDA, du Résultat Net et de la Dette Nette
+ 
+def analyse_ebitda(ebitda):
+    if ebitda.iloc[2] > ebitda.iloc[1] > ebitda.iloc[0]:
+        return "L'EBITDA a augmenté chaque année, montrant une performance opérationnelle solide.", "bon"
+    elif ebitda.iloc[2] < ebitda.iloc[1] < ebitda.iloc[0]:
+        return "L'EBITDA a diminué chaque année, ce qui pourrait indiquer une baisse d'efficacité opérationnelle.", "mauvais"
+    elif ebitda.iloc[2] > ebitda.iloc[1] < ebitda.iloc[0]:
+        return "L'EBITDA a d'abord baissé puis augmenté, ce qui pourrait indiquer un retour à l'amélioration opérationnelle.", "bon"
+    elif ebitda.iloc[2] < ebitda.iloc[1] > ebitda.iloc[0]:
+        return "L'EBITDA a augmenté puis diminué, ce qui pourrait indiquer une instabilité dans l'efficacité opérationnelle.", "mauvais"
+    else:
+        return "L'EBITDA est stable, suggérant une constance dans les performances opérationnelles.", "neutre"
+ 
+def analyse_resultat_net(benefice_net):
+    if benefice_net.iloc[2] > benefice_net.iloc[1] > benefice_net.iloc[0]:
+        return "Le résultat net a augmenté chaque année, montrant une amélioration de la rentabilité nette.", "bon"
+    elif benefice_net.iloc[2] < benefice_net.iloc[1] < benefice_net.iloc[0]:
+        return "Le résultat net a baissé chaque année, ce qui pourrait être préoccupant pour la rentabilité.", "mauvais"
+    elif benefice_net.iloc[2] > benefice_net.iloc[1] < benefice_net.iloc[0]:
+        return "Le résultat net a d'abord baissé puis augmenté, ce qui pourrait suggérer un retour à la croissance des profits.", "bon"
+    elif benefice_net.iloc[2] < benefice_net.iloc[1] > benefice_net.iloc[0]:
+        return "Le résultat net a augmenté puis diminué, ce qui pourrait indiquer une instabilité dans la rentabilité.", "mauvais"
+    else:
+        return "Le résultat net est resté stable, suggérant une constance dans les performances financières.", "neutre"
+ 
+def analyse_dette_nette(dette_nette):
+    if dette_nette.iloc[2] < dette_nette.iloc[1] < dette_nette.iloc[0]:
+        return "La dette nette a diminué chaque année, indiquant une réduction de l'endettement.", "bon"
+    elif dette_nette.iloc[2] > dette_nette.iloc[1] > dette_nette.iloc[0]:
+        return "La dette nette a augmenté chaque année, ce qui peut indiquer un accroissement de l'endettement.", "mauvais"
+    elif dette_nette.iloc[2] < dette_nette.iloc[1] > dette_nette.iloc[0]:
+        return "La dette nette a d'abord augmenté puis diminué, indiquant une gestion de la dette plus rigoureuse.", "bon"
+    elif dette_nette.iloc[2] > dette_nette.iloc[1] < dette_nette.iloc[0]:
+        return "La dette nette a diminué puis augmenté, ce qui pourrait signaler des fluctuations dans les financements.", "mauvais"
+    else:
+        return "La dette nette est stable, montrant une constance dans la gestion de la dette.", "neutre"
+ 
+# Analyse finale basée sur les conclusions des fonctions individuelles
+def analyse_finale(marge_brute, marge_ope, marge_benef, ebitda, benefice_net, dette_nette):
+    analyses = [
+        analyse_marge_brute(marge_brute)[1],
+        analyse_marge_operationnelle(marge_ope)[1],
+        analyse_marge_beneficiaire(marge_benef)[1],
+        analyse_ebitda(ebitda)[1],
+        analyse_resultat_net(benefice_net)[1],
+        analyse_dette_nette(dette_nette)[1]
+    ]
+   
+    # Compter les occurrences de chaque évaluation
+    evaluation_counts = {"bon": analyses.count("bon"), "mauvais": analyses.count("mauvais"), "neutre": analyses.count("neutre")}
+   
+    # Établir la conclusion
+    if evaluation_counts["bon"] >= 4:
+        return "Conclusion : Très bons chiffres."
+    elif evaluation_counts["bon"] >= 2:
+        return "Conclusion : Bons chiffres."
+    elif evaluation_counts["mauvais"] >= 4:
+        return "Conclusion : Très mauvais chiffres."
+    else:
+        return "Conclusion : Mauvais chiffres."
+ 
