@@ -10,6 +10,7 @@ api_key = "92b5d37f639c36b7bdd4f83b8210cfb76706934bf25a2883bd1f3da6f2c28113"
 queryApi = QueryApi(api_key=api_key)
 extractorApi = ExtractorApi(api_key=api_key)
 
+
 # Configurer le client Bedrock Runtime
 bedrock_runtime_client = boto3.client('bedrock-runtime', region_name='us-west-2')  # Modify region if necessary
 
@@ -139,7 +140,7 @@ def analyze_sentiment(section_name, section_text):
                 # Exemple de score de sentiment simulé pour le calcul
                 sentiment_scores = {
                     'positive': 10,  # Remplacez ces valeurs par des valeurs réelles
-                    'negative': 3,
+                    'negative': 0,
                     'neutral': 5
                 }
 
@@ -159,5 +160,3 @@ def analyze_sentiment(section_name, section_text):
                 return  # Exit on other errors
     print(f"Max retries reached for {section_name}. Skipping sentiment analysis.")
 
-ticker = input("Entrez le ticker de l'entreprise (ex: NVDA) : ") 
-get_latest_10k_report(ticker) 
