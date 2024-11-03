@@ -1,70 +1,57 @@
 import yfinance as yf
-import matplotlib.pyplot as plt
 import pandas as pd
+import matplotlib.pyplot as plt
 
-# Définir le symbole de l'entreprise
-symbol = 'AIR'
-entreprise = yf.Ticker(symbol)
+# Function to get company data from yfinance
+def get_company_data(symbol):
+    entreprise = yf.Ticker(symbol)
+    info = entreprise.info
+    historique = entreprise.history(period='1y')
+    bilan = entreprise.balance_sheet
+    compte_de_resultat = entreprise.financials
+    flux_de_tresorerie = entreprise.cashflow
+    return info, historique, bilan, compte_de_resultat, flux_de_tresorerie
 
-# Récupérer les informations financières
-info = entreprise.info
-historique = entreprise.history(period='1y')
-bilan = entreprise.balance_sheet
-compte_de_resultat = entreprise.financials
-flux_de_tresorerie = entreprise.cashflow
-
-# Tracer l'EBITDA
+# Plotting function for financial metrics
 def plot_financial_metric(dates, values, title, ylabel):
-    plt.figure(figsize=(10, 6))
-    plt.plot(dates, values, marker='o', linestyle='-', color='b')
-    plt.title(title)
-    plt.xlabel('Année')
-    plt.ylabel(ylabel)
-    plt.xticks(rotation=45)
-    plt.grid()
-    plt.tight_layout()
-    plt.show()
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(dates, values, marker='o', linestyle='-', color='b')
+    ax.set_title(title)
+    ax.set_xlabel('Année')
+    ax.set_ylabel(ylabel)
+    ax.tick_params(axis='x', rotation=45)
+    ax.grid()
+    return fig  # Return the figure instead of using st.pyplot here
 
-dates = compte_de_resultat.columns
-plot_financial_metric(dates, compte_de_resultat.loc['EBITDA'].values, "Évolution de l'EBITDA", "EBITDA (en milliards)")
+# Function to get Gross Profit Margin
+def calculate_gross_profit_margin(compte_de_resultat):
+    GPM = (compte_de_resultat.loc['Gross Profit'] / compte_de_resultat.loc['Total Revenue']) * 100
+    return GPM
 
-# Tracer le Gross Profit Margin
-GPM = (compte_de_resultat.loc['Gross Profit'] / compte_de_resultat.loc['Total Revenue']) * 100
-plot_financial_metric(dates, GPM, "Évolution du Gross Profit Margin", "GPM %")
+# Function to display sector data
+def display_sector_info(info):
+    secteur = info['sector'].lower()
+    return secteur  # Return the sector instead of printing it
 
-# Extraction du secteur et des entreprises clés
-secteur = info['sector'].lower()
-sector = yf.Sector(secteur)
-top_companies = sector.top_companies
-print(secteur)
+# Function to plot market weights
+def plot_market_weights(top_companies):
+    weights_df = pd.DataFrame({
+        'Entreprise': top_companies.index,
+        'Poids de Marché (%)': top_companies['market weight']
+    })
 
-# Convertir les poids de marché en DataFrame
-weights_df = pd.DataFrame({
-    'Entreprise': top_companies.index,
-    'Poids de Marché (%)': top_companies['market weight']
-})
+    threshold = 0.010
+    others_mask = weights_df['Poids de Marché (%)'] < threshold
+    others_weight = weights_df.loc[others_mask, 'Poids de Marché (%)'].sum()
 
-# Regroupement des entreprises avec moins de 1%
-threshold = 0.010
-others_mask = weights_df['Poids de Marché (%)'] < threshold
-others_weight = weights_df.loc[others_mask, 'Poids de Marché (%)'].sum()
+    filtered_df = weights_df[~others_mask].copy()
+    filtered_df.loc[len(filtered_df)] = ['Autres', others_weight]
 
-# Créer un DataFrame pour les "Autres"
-others_table = weights_df[others_mask]
-if not others_table.empty:
-    others_table = others_table[['Entreprise', 'Poids de Marché (%)']]
-    print(others_table)
-
-# Filtrer les entreprises ayant plus de 1%
-filtered_df = weights_df[~others_mask].copy()
-filtered_df.loc[len(filtered_df)] = ['Autres', others_weight]  # Ajouter la ligne "Autres"
-
-# Vérification de la longueur des données et affichage du diagramme en secteurs
-if not filtered_df.empty:
-    plt.figure(figsize=(10, 8))
-    plt.pie(filtered_df['Poids de Marché (%)'], labels=filtered_df['Entreprise'], autopct='%1.1f%%', startangle=140)
-    plt.title(f'Poids de Marché des Entreprises Clés dans le Secteur {secteur.capitalize()}')
-    plt.axis('equal')
-    plt.show()
-else:
-    print("Erreur : Le DataFrame est vide.")
+    if not filtered_df.empty:
+        fig, ax = plt.subplots(figsize=(10, 8))
+        ax.pie(filtered_df['Poids de Marché (%)'], labels=filtered_df['Entreprise'], autopct='%1.1f%%', startangle=140)
+        ax.set_title('Poids de Marché des Entreprises Clés')
+        ax.axis('equal')
+        return fig  # Return the figure instead of using st.pyplot here
+    else:
+        return None  # Return None if DataFrame is empty
