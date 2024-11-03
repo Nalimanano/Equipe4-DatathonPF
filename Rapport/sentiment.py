@@ -3,7 +3,6 @@ import boto3
 import json
 import os
 import time
-import matplotlib.pyplot as plt
 
 # Initialisation des APIs
 api_key = "92b5d37f639c36b7bdd4f83b8210cfb76706934bf25a2883bd1f3da6f2c28113"
@@ -37,7 +36,7 @@ def create_bucket_if_not_exists(bucket_name):
 create_bucket_if_not_exists(s3_bucket_name)
 
 def get_latest_10k_report(ticker):
-    sections = ["1", "1A", "1B", "2", "3", "4", "5", "6", "7", "7A", "8", "9", "9A", "9B", "10", "11", "12", "13", "14", "15"]    
+    sections = ["1", "1A", "7"]    
     existing_sections_text = {}
 
     for section in sections:
@@ -55,7 +54,7 @@ def get_latest_10k_report(ticker):
     if existing_sections_text:
         print(f"Tous les fichiers pour le ticker '{ticker}' existent déjà. Effectuer l'analyse de sentiment.")
         combined_text = "\n".join(existing_sections_text.values())
-        analyze_sentiment("Combined Sections", combined_text)
+        analyze_sentiment("Combined Sections", combined_text, ticker)
         return
 
     query = {
@@ -80,14 +79,14 @@ def get_latest_10k_report(ticker):
         try:
             section_text = extractorApi.get_section(filing_url, str(section), "text")
             if section_text:
-                combined_text += section_text + "\n"  # Combine section texts
+                combined_text += section_text + "\n"  
                 s3_file_name = f"{s3_folder}{ticker}_section_{section}.txt"
                 s3_upload(section_text, s3_file_name)
         except Exception as e:
             print(f"Erreur lors de l'extraction de la section {section}: {e}")
 
     if combined_text:
-        analyze_sentiment("Combined Sections", combined_text)
+        analyze_sentiment("Combined Sections", combined_text, ticker)
 
 def s3_upload(file_content, file_name):
     try:
@@ -100,13 +99,7 @@ def s3_upload(file_content, file_name):
         except Exception as e:
             print(f"Erreur lors de l'upload vers S3 : {e}")
 
-def calculate_sentiment_index(sentiment_scores):
-    positive = sentiment_scores.get('positive', 0)
-    negative = sentiment_scores.get('negative', 0)
-    neutral = sentiment_scores.get('neutral', 0)
-    return (positive - negative) / (positive + negative + neutral + 1e-9)
-
-def analyze_sentiment(section_name, section_text):
+def analyze_sentiment(section_name, section_text, ticker):
     max_retries = 5
     for attempt in range(max_retries):
         try:
@@ -123,7 +116,7 @@ def analyze_sentiment(section_name, section_text):
                             "content": [
                                 {
                                     "type": "text",
-                                    "text": f"Analyze the sentiment of the following sections from a financial report : '{section_text}'"
+                                    "text": f"Analyze the sentiment of the following sections from a financial report : '{section_text}', give a sentimental analysis index score from 0 to 1"
                                 }
                             ]
                         }
@@ -135,20 +128,14 @@ def analyze_sentiment(section_name, section_text):
             if result and "content" in result:
                 sentiment_analysis = result["content"][0].get("text")
                 print(f"Sentiment for {section_name}: {sentiment_analysis}")
-
-                # Exemple de score de sentiment simulé pour le calcul
-                sentiment_scores = {
-                    'positive': 10,  # Remplacez ces valeurs par des valeurs réelles
-                    'negative': 3,
-                    'neutral': 5
-                }
-
-                sentiment_index = calculate_sentiment_index(sentiment_scores)
-
-                print(f"Sentiment Index for {section_name}: {sentiment_index:.4f}")
+                
+                # Save sentiment analysis to a text file
+                sentiment_file_name = f"{ticker}_sentiment_analysis.txt"
+                save_sentiment_to_file(sentiment_file_name, section_name, sentiment_analysis)
+                
             else:
                 print(f"Aucune analyse de sentiment disponible pour la section {section_name}")
-            return  # Exit function if successful
+            return 
         except Exception as e:
             if "ThrottlingException" in str(e):
                 wait_time = 2 ** attempt  # Exponential backoff
@@ -159,5 +146,10 @@ def analyze_sentiment(section_name, section_text):
                 return  # Exit on other errors
     print(f"Max retries reached for {section_name}. Skipping sentiment analysis.")
 
+def save_sentiment_to_file(file_name, section_name, sentiment_analysis):
+    with open(file_name, "a") as f:
+        f.write(f"Sentiment for {section_name}:\n{sentiment_analysis}\n\n")
+    print(f"Sentiment analysis saved to {file_name}")
+
 ticker = input("Entrez le ticker de l'entreprise (ex: NVDA) : ") 
-get_latest_10k_report(ticker) 
+get_latest_10k_report(ticker)
