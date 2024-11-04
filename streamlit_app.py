@@ -4,7 +4,8 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import mplfinance as mpf
 import plotly.graph_objects as go
-
+import re
+import yfinance as yf
 
 from Analyse_Financiere.Analyse_financiere import (
     get_financial_data,
@@ -20,11 +21,37 @@ from Analyse_Technique.Analyse_technique import (get_data, calculate_indicators,
                       find_most_frequent_intervals, analyse_rsi, analyse_macd,
                       analyse_trend, analyse_levels)
 
+from Rapport.sentiment import (create_bucket_if_not_exists, get_latest_10k_report, s3_upload, analyze_sentiment, save_sentiment_to_file, create_gauge)
+
 st.title("Tableau de Bord d'Analyse Financière et Technique")
 
 ticker = st.text_input("Entrez le symbole boursier de l'entreprise :")
 
 if st.button("Générer l'Analyse"):
+    data = yf.Ticker(ticker).info
+
+    # Extraire la liste des responsables de gouvernance
+    # Extract governance information
+    governance_list = [
+        {
+            "Name": officer.get("name"),
+            "Position": officer.get("title"),
+            "Age": officer.get("age"),
+            "Total Compensation per year": f"${officer.get('totalPay', 0):,.2f}" if officer.get("totalPay") else "N/A",
+        }
+        for officer in data.get("companyOfficers", [])
+    ]
+
+    # Display the list of executives
+    st.subheader("Executive Team")
+    for officer in governance_list:
+        st.write(f"**Name**: {officer['Name']}")
+        st.write(f"**Position**: {officer['Position']}")
+        st.write(f"**Age**: {officer['Age']}")
+        st.write(f"**Total Compensation**: {officer['Total Compensation per year']}")
+        st.write("---")  # Separator between executives
+
+
     # Récupérer les données financières
     marges_df, marge_brute, marge_ope, marge_benef, ebitda, benefice_net, dette_nette = get_financial_data(ticker)
 
@@ -51,105 +78,20 @@ if st.button("Générer l'Analyse"):
     ]
     st.write(analyse_finale(marge_brute, marge_ope, marge_benef, ebitda, benefice_net, dette_nette))
 
-data = get_data(ticker)
-data = calculate_indicators(data)
+    get_latest_10k_report(ticker)
 
-# Indicateurs et niveaux
-levels = detect_support_resistance(data)
-current_price = data['Close'].iloc[-1]
-top_resistances = find_most_frequent_intervals([lvl for lvl in levels if lvl > current_price], current_price)
-top_supports = find_most_frequent_intervals([lvl for lvl in levels if lvl < current_price], current_price)
+    file_path = f"{ticker}_sentiment_analysis.txt" 
 
-# Analyse
-st.subheader("Analyse RSI")
-st.write(analyse_rsi(data))
+    # Lire le contenu du fichier
+    with open(file_path, "r", encoding="utf-8") as file:
+        content = file.read()
+        match = re.search(r"3\. Sentiment Score: (\d+\.\d+)", content)
+    if match:
+        score = float(match.group(1))  # Convertir le nombre en float
 
-st.subheader("Analyse MACD")
-st.write(analyse_macd(data))
+    # Afficher le contenu dans une zone de texte
+    st.text_area("Contenu du fichier :", content, height=300)
+    gauge_fig = create_gauge(score)
+    st.plotly_chart(gauge_fig, use_container_width=True)
 
-st.subheader("Analyse de la tendance (SMA 50)")
-st.write(analyse_trend(data))
 
-st.subheader("Analyse des niveaux de support et résistance")
-closest_level, level_type = analyse_levels(data, levels)
-st.write(f"Niveau le plus proche: {closest_level:.2f} ({level_type})")
-
-# Graphique en chandeliers avec Plotly
-st.subheader("Graphique en Chandeliers avec SMA 50 et niveaux")
-fig = go.Figure()
-
-# Ajouter les bougies
-fig.add_trace(go.Candlestick(
-    x=data.index,
-    open=data['Open'],
-    high=data['High'],
-    low=data['Low'],
-    close=data['Close'],
-    name='Candlesticks'
-))
-
-# Ajouter la SMA 50
-fig.add_trace(go.Scatter(
-    x=data.index,
-    y=data['Close'].rolling(window=50).mean(),
-    mode='lines',
-    name='SMA 50',
-    line=dict(color='orange', width=1)
-))
-
-# Graphique MACD et RSI
-st.subheader("Graphique MACD et RSI")
-fig_macd_rsi = go.Figure()
-
-# Tracer le MACD
-fig_macd_rsi.add_trace(go.Scatter(
-    x=data.index,
-    y=data['MACD'],
-    mode='lines',
-    name='MACD',
-    line=dict(color='blue')
-))
-
-fig_macd_rsi.add_trace(go.Scatter(
-    x=data.index,
-    y=data['Signal'],
-    mode='lines',
-    name='Signal',
-    line=dict(color='red')
-))
-
-# Tracer l'histogramme du MACD avec des couleurs basées sur les valeurs
-fig_macd_rsi.add_trace(go.Bar(
-    x=data.index,
-    y=data['Hist'],
-    name='Histogram',
-    marker=dict(color=['green' if val >= 0 else 'red' for val in data['Hist']])
-))
-
-fig_macd_rsi.update_layout(title='Graphique MACD',
-                            xaxis_title='Date',
-                            yaxis_title='MACD',
-                            yaxis=dict(range=[min(data['MACD'].min(), data['Signal'].min()) - 1, 
-                                              max(data['MACD'].max(), data['Signal'].max()) + 1]))
-
-# Tracer le RSI
-fig_macd_rsi.add_trace(go.Scatter(
-    x=data.index,
-    y=data['RSI'],
-    mode='lines',
-    name='RSI',
-    line=dict(color='purple')
-))
-
-# Ajouter les lignes de surachat et de survente
-fig_macd_rsi.add_shape(type='line', x0=data.index[0], y0=70, x1=data.index[-1], y1=70,
-                        line=dict(color='red', width=2, dash='dash'))
-
-fig_macd_rsi.add_shape(type='line', x0=data.index[0], y0=30, x1=data.index[-1], y1=30,
-                        line=dict(color='green', width=2, dash='dash'))
-
-fig_macd_rsi.update_layout(title='Graphique MACD et RSI',
-                            xaxis_title='Date',
-                            yaxis_title='Valeurs')
-
-st.plotly_chart(fig_macd_rsi)
