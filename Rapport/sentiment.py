@@ -6,7 +6,7 @@ import time
 import plotly.graph_objects as go
 
 # Initialisation des APIs
-api_key = "3eb8dbfb8b504974dd462c2ce2d9ec36d24bd3919f1c9ef71cf18d3219c106cc"
+api_key = "27c68f4298fdc84573456e18f5c756899b7cbc5551ab78e9d9f13b72c08415ad"
 queryApi = QueryApi(api_key=api_key)
 extractorApi = ExtractorApi(api_key=api_key)
 
@@ -120,7 +120,7 @@ def analyze_sentiment(section_name, section_text, ticker):
                             "content": f"Analyze the {section_name} section of the company's 10-K report with a focus on three main aspects: financial performance, growth prospects, and risks. Pay special attention to potential use of neutral or positive language that may mask negative news, such as challenges or downturns. Identify and summarize key insights related to revenue, market trends, competition, and regulatory impacts. Avoid overly neutral interpretations by scrutinizing language that might downplay negative indicators. Provide the following outputs for this section:\n\n"
                                        f"1. Summary: A concise overview of the main points.\n"
                                        f"2. Insights: Key insights on financial trends, challenges, and opportunities.\n"
-                                       f"3. Sentiment Score: Based on your analysis, assign a sentiment score for this section: -1 (negative), 0 (neutral), or 1 (positive), it can be a decimal number. Be cautious with neutral scores; look for subtle cues that might indicate hidden sentiment.\n"
+                                       f"3. Sentiment Score: Based on your analysis, assign a sentiment score for this section: 0 (negative), 50 (neutral), or 100 (positive), it must be a int number. Be cautious with neutral scores; look for subtle cues that might indicate hidden sentiment.\n"
                                        f"Section Text: '{section_text}'"
                         }
                     ]
@@ -159,29 +159,31 @@ def save_sentiment_to_file(file_name, section_name, sentiment_analysis):
 def create_gauge(score):
     fig = go.Figure()
 
-    # Définir les limites
-    min_val = -1
-    max_val = 1
+    # Define limits
+    min_val = 0
+    max_val = 100
 
-    # Ajouter le gauge
+    # Add gauge
     fig.add_trace(go.Indicator(
         mode="gauge+number",
         value=score,
-        title={"text": "Score de Sentiment"},
+        title={"text": "Sentiment Score", "font": {"color": "black"}},
         gauge={
             "axis": {"range": [min_val, max_val], "tickcolor": "darkgray"},
-            "bar": {"color": "steelblue"},  # Couleur de la barre
-            "bgcolor": "lightgray",  # Couleur de fond
+            "bar": {"color": "royalblue"},  # Stronger blue for the bar
+            "bgcolor": "whitesmoke",  # Light background for contrast
             "steps": [
-                {"range": [-1, 0], "color": "lightcoral"},  # Couleur plus douce pour la zone de peur
-                {"range": [0, 1], "color": "lightgreen"},  # Couleur plus douce pour la zone de cupidité
+                {"range": [0, 50], "color": "#FF4500"},  # Dark orange for negative
+                {"range": [50, 75], "color": "#FFD700"},  # Gold for neutral
+                {"range": [75, 100], "color": "#32CD32"},  # Lime green for positive
             ],
             "threshold": {
-                "line": {"color": "darkblue", "width": 4},  # Ligne pour indiquer le score
-                "value": score,
+                "line": {"color": "darkblue", "width": 4},  # Highlighting line for score
+                "value": score, 
             },
         }
     ))
 
     fig.update_layout(paper_bgcolor="white")
     return fig
+
