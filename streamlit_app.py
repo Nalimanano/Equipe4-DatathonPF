@@ -192,8 +192,6 @@ elif analyse_choix == "Sector":
             overview = description_marche(sec)
             st.table(overview)
 
-            
-
             # Disposition des éléments en deux colonnes avec une proportion 3/4 pour le graphique et 1/4 pour le tableau
             left_space, col1, col2, right_space = st.columns([1, 3, 2, 0.5], vertical_alignment = "top", gap="small")  # Colonne 1 pour le graphique et colonne 2 pour le tableau
             
