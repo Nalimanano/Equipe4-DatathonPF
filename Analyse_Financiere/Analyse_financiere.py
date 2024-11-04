@@ -1,9 +1,19 @@
-# Analyse_Technique/analyse_technique.py
-
 import yfinance as yf
 import pandas as pd
 
-# Fonction pour récupérer les données financières
+def description_action(ticker):
+    entreprise = yf.Ticker(ticker)
+    info = entreprise.info
+    data = pd.DataFrame({
+        'Name of the company': [info.get('longName', 'N/A')],
+        'Summary': [info.get('longBusinessSummary', 'N/A')],
+        'Sector': [info.get('sector', 'N/A')],
+        'Industry': [info.get('industry', 'N/A')],
+        'Market capitalization (in €M)': [info.get('marketCap', 0) * 1e-6] 
+    })
+
+    return data
+
 def get_financial_data(ticker):
     entreprise = yf.Ticker(ticker)
     compte_de_resultat = entreprise.financials
@@ -19,13 +29,11 @@ def get_financial_data(ticker):
     tresorerie = bilan.loc['Cash And Cash Equivalents'][:3] * 1e-6
     dette_nette = dette_totale - tresorerie
 
-    # Calcul du Besoin en Fonds de Roulement (BFR)
-    stocks = bilan.loc['Inventory'][:3] * 1e-6  # Conversion en millions
+    stocks = bilan.loc['Inventory'][:3] * 1e-6 
     creances_clients = bilan.loc['Accounts Receivable'][:3] * 1e-6
     dettes_fournisseurs = bilan.loc['Accounts Payable'][:3] * 1e-6
     bfr = stocks + creances_clients - dettes_fournisseurs
 
-    # Calcul des ratios de liquidité et dette/EBITDA
     actifs_circulants = bilan.loc['Total Assets'][:3] * 1e-6
     passifs_circulants = bilan.loc['Total Liabilities Net Minority Interest'][:3] * 1e-6
     ratio_liquidite = actifs_circulants / passifs_circulants
@@ -89,8 +97,6 @@ def analyse_marge_beneficiaire(marge_benef):
     else:
         return "La marge bénéficiaire est stable, montrant une bonne maîtrise des coûts globaux et des impôts.", "neutre"
  
-# Fonctions pour l'analyse de l'EBITDA, du Résultat Net et de la Dette Nette
- 
 def analyse_ebitda(ebitda):
     if ebitda.iloc[2] > ebitda.iloc[1] > ebitda.iloc[0]:
         return "L'EBITDA a augmenté chaque année, montrant une performance opérationnelle solide.", "bon"
@@ -127,7 +133,6 @@ def analyse_dette_nette(dette_nette):
     else:
         return "La dette nette est stable, montrant une constance dans la gestion de la dette.", "neutre"
 
-# Fonction pour analyser l'évolution du BFR
 def analyse_bfr(bfr):
     if bfr.iloc[2] < bfr.iloc[1] < bfr.iloc[0]:
         return "Le BFR a diminué chaque année, indiquant une meilleure gestion des stocks et créances, ou une réduction des dettes fournisseurs.", "bon"
@@ -140,7 +145,6 @@ def analyse_bfr(bfr):
     else:
         return "Le BFR est stable, montrant une gestion constante des liquidités pour les opérations.", "neutre"
 
-# Fonctions pour l'analyse des ratios de liquidité et dette/EBITDA
 def analyse_ratio_liquidite(ratio_liquidite):
     if ratio_liquidite.iloc[2] > ratio_liquidite.iloc[1] > ratio_liquidite.iloc[0]:
         return "Le ratio de liquidité a augmenté chaque année, indiquant une meilleure capacité à couvrir les dettes court terme.", "bon"
@@ -157,7 +161,6 @@ def analyse_dette_ebitda(ratio_dette_ebitda):
     else:
         return "Le ratio Dette/EBITDA est stable.", "neutre"
     
-# Analyse finale basée sur les conclusions des fonctions individuelles
 def analyse_finale(marge_brute, marge_ope, marge_benef, ebitda, benefice_net, dette_nette, bfr, ratio_liquidite, ratio_dette_ebitda):
     analyses = [
         analyse_marge_brute(marge_brute)[1],
@@ -173,7 +176,6 @@ def analyse_finale(marge_brute, marge_ope, marge_benef, ebitda, benefice_net, de
     
     evaluation_counts = {"bon": analyses.count("bon"), "mauvais": analyses.count("mauvais"), "neutre": analyses.count("neutre")}
     
-    # Établir la conclusion
     if evaluation_counts["bon"] >= 6:
         return "Conclusion : Très bons chiffres."
     elif evaluation_counts["bon"] >= 4:
@@ -183,7 +185,7 @@ def analyse_finale(marge_brute, marge_ope, marge_benef, ebitda, benefice_net, de
     else:
         return "Conclusion : Mauvais chiffres."
 
- # Afficher les analyses
+
 ticker = 'AAPL'
 marges_df, marge_brute, marge_ope, marge_benef, ebitda, benefice_net, dette_nette, bfr, ratio_liquidite, ratio_dette_ebitda = get_financial_data(ticker)
 print("\nAnalyse de l'évolution des marges et impact :\n")
@@ -197,5 +199,4 @@ print("BFR :", analyse_bfr(bfr)[0])
 print("Ratio de Liquidité :", analyse_ratio_liquidite(ratio_liquidite)[0])
 print("Dette/EBITDA :", analyse_dette_ebitda(ratio_dette_ebitda)[0])
 
-# Afficher la conclusion finale
 print("\n", analyse_finale(marge_brute, marge_ope, marge_benef, ebitda, benefice_net, dette_nette, bfr, ratio_liquidite, ratio_dette_ebitda))
