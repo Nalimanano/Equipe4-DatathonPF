@@ -1,7 +1,8 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import mplfinance as mpf
-import pandas as pd
+import pandas as pdimport re
+import yfinance as yf
 
 from Analyse_Financiere.Analyse_financiere import (
     get_financial_data,
@@ -26,6 +27,10 @@ from Analyse_Technique.Analyse_technique import (
 from Analyse_secteur.analyse_secteur import (
     secteurs_acteurs, obtenir_acteurs_principaux, tracer_pie_chart
 )
+
+from Rapport.sentiment import (create_bucket_if_not_exists, get_latest_10k_report, s3_upload, analyze_sentiment, save_sentiment_to_file, create_gauge)
+
+from Rapport.sentiment import (create_bucket_if_not_exists, get_latest_10k_report, s3_upload, analyze_sentiment, save_sentiment_to_file, create_gauge)
 
 st.title("Tableau de Bord d'Analyse Financière et Technique")
 
