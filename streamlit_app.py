@@ -1,7 +1,8 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import mplfinance as mpf
-import pandas as pdimport re
+import pandas as pd
+import re
 import yfinance as yf
 
 from Analyse_Financiere.Analyse_financiere import (
@@ -28,12 +29,10 @@ from Analyse_secteur.analyse_secteur import (
     secteurs_acteurs, obtenir_acteurs_principaux, tracer_pie_chart
 )
 
-from Rapport.sentiment import (create_bucket_if_not_exists, get_latest_10k_report, s3_upload, analyze_sentiment, save_sentiment_to_file, create_gauge)
-
-from Rapport.sentiment import (create_bucket_if_not_exists, get_latest_10k_report, s3_upload, analyze_sentiment, save_sentiment_to_file, create_gauge)
+from Rapport.sentiment import (create_bucket_if_not_exists, get_latest_10k_report, s3_upload, analyze_sentiment, 
+                               save_sentiment_to_file, create_gauge)
 
 st.title("Tableau de Bord d'Analyse Financière et Technique")
-
 # Choix entre action et secteur
 analyse_choix = st.radio("Que souhaitez-vous analyser ?", ("Action", "Secteur"))
 
@@ -95,6 +94,44 @@ if analyse_choix == "Action":
                 st.write("**MACD :**", analyse_macd(data))
                 st.write("**Tendance SMA 50 :**", analyse_sma(data))
                 st.write("**Niveaux de Support et Résistance :**", analyse_niveaux(data, supports + resistances))
+
+                # Extraire la liste des responsables de gouvernance
+                data = yf.Ticker(ticker).info
+                # Extract governance information
+                governance_list = [
+                    {
+                        "Name": officer.get("name"),
+                        "Position": officer.get("title"),
+                        "Age": officer.get("age"),
+                        "Total Compensation per year": f"${officer.get('totalPay', 0):,.2f}" if officer.get("totalPay") else "N/A",
+                    }
+                    for officer in data.get("companyOfficers", [])
+                ]
+
+                # Display the list of executives
+                st.subheader("Executive Team")
+                for officer in governance_list:
+                    st.write(f"**Name**: {officer['Name']}")
+                    st.write(f"**Position**: {officer['Position']}")
+                    st.write(f"**Age**: {officer['Age']}")
+                    st.write(f"**Total Compensation**: {officer['Total Compensation per year']}")
+                    st.write("---")  # Separator between executives
+
+                get_latest_10k_report(ticker)
+
+                file_path = f"{ticker}_sentiment_analysis.txt" 
+
+                # Lire le contenu du fichier
+                with open(file_path, "r", encoding="utf-8") as file:
+                    content = file.read()
+                    match = re.search(r"3\. Sentiment Score: (\d+\.\d+)", content)
+                if match:
+                    score = float(match.group(1))  # Convertir le nombre en float
+
+                # Afficher le contenu dans une zone de texte
+                st.text_area("Contenu du fichier :", content, height=300)
+                gauge_fig = create_gauge(score)
+                st.plotly_chart(gauge_fig, use_container_width=True)
 
             except ValueError as e:
                 st.error(f"Erreur lors de la récupération des données : {str(e)}")
