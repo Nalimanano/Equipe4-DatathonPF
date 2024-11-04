@@ -1,0 +1,14 @@
+
+__pycache__/
+*.py[cod]
+
+venv/
+.env/
+
+.DS_Store
+
+.vscode/
+*.sublime-workspace
+*.sublime-project
+
+.aws/credentials
