@@ -51,7 +51,7 @@ To set up the project, follow these steps:
 
 3. **Configure AWS**:
    You will be prompted to enter the following information:
-     - **AWS Access Key ID**: AKIAQCER2INJ7W3E5J7B
-     - **AWS Secret Access Key**: 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
+     - **AWS Access Key ID**: 
+     - **AWS Secret Access Key**:
      - **Default region name**: us-west-2
      - **Default output format**: text
