@@ -174,29 +174,3 @@ def analyse_finale(marge_brute, marge_ope, marge_benef, ebitda, benefice_net, de
         analyse_dette_ebitda(ratio_dette_ebitda)[1]
     ]
     
-    evaluation_counts = {"bon": analyses.count("bon"), "mauvais": analyses.count("mauvais"), "neutre": analyses.count("neutre")}
-    
-    if evaluation_counts["bon"] >= 6:
-        return "Conclusion : Très bons chiffres."
-    elif evaluation_counts["bon"] >= 4:
-        return "Conclusion : Bons chiffres."
-    elif evaluation_counts["mauvais"] >= 6:
-        return "Conclusion : Très mauvais chiffres."
-    else:
-        return "Conclusion : Mauvais chiffres."
-
-
-ticker = 'AAPL'
-marges_df, marge_brute, marge_ope, marge_benef, ebitda, benefice_net, dette_nette, bfr, ratio_liquidite, ratio_dette_ebitda = get_financial_data(ticker)
-print("\nAnalyse de l'évolution des marges et impact :\n")
-print("Marge Brute (%) :", analyse_marge_brute(marge_brute)[0])
-print("Marge Opérationnelle (%) :", analyse_marge_operationnelle(marge_ope)[0])
-print("Marge Bénéficiaire (%) :", analyse_marge_beneficiaire(marge_benef)[0])
-print("EBITDA :", analyse_ebitda(ebitda)[0])
-print("Résultat Net :", analyse_resultat_net(benefice_net)[0])
-print("Dette Nette :", analyse_dette_nette(dette_nette)[0])
-print("BFR :", analyse_bfr(bfr)[0])
-print("Ratio de Liquidité :", analyse_ratio_liquidite(ratio_liquidite)[0])
-print("Dette/EBITDA :", analyse_dette_ebitda(ratio_dette_ebitda)[0])
-
-print("\n", analyse_finale(marge_brute, marge_ope, marge_benef, ebitda, benefice_net, dette_nette, bfr, ratio_liquidite, ratio_dette_ebitda))
