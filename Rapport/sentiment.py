@@ -6,7 +6,7 @@ import time
 import plotly.graph_objects as go
 
 # Initialisation des APIs
-api_key = "92b5d37f639c36b7bdd4f83b8210cfb76706934bf25a2883bd1f3da6f2c28113"
+api_key = "3eb8dbfb8b504974dd462c2ce2d9ec36d24bd3919f1c9ef71cf18d3219c106cc"
 queryApi = QueryApi(api_key=api_key)
 extractorApi = ExtractorApi(api_key=api_key)
 
